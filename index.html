@@ -1,0 +1,195 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Student Course Management – ER Diagram</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f5f6f8;
+  color: #222;
+}
+header {
+  text-align: center;
+  padding: 20px;
+  background: white;
+}
+h2 { margin: 0; font-size: 23px; }
+main { padding: 15px; }
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+  background: white;
+  border: 1px solid #ddd;
+  border-bottom: 0;
+}
+button {
+  padding: 8px 13px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+}
+button:hover { background: #eee; }
+#level { min-width: 48px; text-align: center; }
+#viewer {
+  height: 78vh;
+  min-height: 400px;
+  overflow: hidden;
+  position: relative;
+  background: white;
+  border: 1px solid #ddd;
+  cursor: grab;
+  touch-action: none;
+}
+#viewer.dragging { cursor: grabbing; }
+#diagram {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  max-width: none;
+  max-height: none;
+  width: auto;
+  height: auto;
+  user-select: none;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+.tip {
+  text-align: center;
+  padding: 10px;
+  color: #666;
+  font-size: 13px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h2>Student Course and Enrollment Management System</h2>
+</header>
+
+<main>
+  <div class="toolbar">
+    <button id="minus">−</button>
+    <span id="level">100%</span>
+    <button id="plus">+</button>
+    <button id="fit">Fit</button>
+    <button id="reset">Reset</button>
+    <button id="full">Full Screen</button>
+  </div>
+
+  <div id="viewer">
+    <img id="diagram"
+      src="ER_Diagram_Chen_Large_zoomable.png"
+      alt="Student Course Management ER Diagram">
+  </div>
+
+  <p class="tip">
+    Scroll to zoom · Drag to move · Use buttons to control the diagram
+  </p>
+</main>
+
+<script>
+const viewer = document.getElementById("viewer");
+const img = document.getElementById("diagram");
+const level = document.getElementById("level");
+
+let scale = 1, x = 0, y = 0;
+let dragging = false, startX = 0, startY = 0;
+
+function render() {
+  img.style.transform =
+    `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) scale(${scale})`;
+  level.textContent = Math.round(scale * 100) + "%";
+}
+
+function fit() {
+  if (!img.naturalWidth) return;
+  scale = Math.min(
+    (viewer.clientWidth - 30) / img.naturalWidth,
+    (viewer.clientHeight - 30) / img.naturalHeight,
+    1
+  );
+  x = 0;
+  y = 0;
+  render();
+}
+
+function zoom(factor, cx = viewer.clientWidth / 2,
+              cy = viewer.clientHeight / 2) {
+  const old = scale;
+  const next = Math.max(0.1, Math.min(8, scale * factor));
+  const px = cx - viewer.clientWidth / 2 - x;
+  const py = cy - viewer.clientHeight / 2 - y;
+  x -= px * (next / old - 1);
+  y -= py * (next / old - 1);
+  scale = next;
+  render();
+}
+
+img.onload = fit;
+
+document.getElementById("plus").onclick = () => zoom(1.25);
+document.getElementById("minus").onclick = () => zoom(0.8);
+document.getElementById("fit").onclick = fit;
+
+document.getElementById("reset").onclick = () => {
+  scale = 1; x = 0; y = 0;
+  render();
+};
+
+document.getElementById("full").onclick = async () => {
+  if (document.fullscreenElement) {
+    await document.exitFullscreen();
+  } else {
+    await viewer.requestFullscreen();
+  }
+};
+
+viewer.addEventListener("wheel", e => {
+  e.preventDefault();
+  const r = viewer.getBoundingClientRect();
+  zoom(e.deltaY < 0 ? 1.12 : 1 / 1.12,
+       e.clientX - r.left, e.clientY - r.top);
+}, { passive: false });
+
+viewer.addEventListener("pointerdown", e => {
+  dragging = true;
+  startX = e.clientX - x;
+  startY = e.clientY - y;
+  viewer.classList.add("dragging");
+  viewer.setPointerCapture(e.pointerId);
+});
+
+viewer.addEventListener("pointermove", e => {
+  if (!dragging) return;
+  x = e.clientX - startX;
+  y = e.clientY - startY;
+  render();
+});
+
+function stopDrag() {
+  dragging = false;
+  viewer.classList.remove("dragging");
+}
+viewer.addEventListener("pointerup", stopDrag);
+viewer.addEventListener("pointercancel", stopDrag);
+
+window.addEventListener("resize", () => {
+  if (scale < 1) fit();
+});
+
+if (img.complete && img.naturalWidth) fit();
+</script>
+
+</body>
+</html>
